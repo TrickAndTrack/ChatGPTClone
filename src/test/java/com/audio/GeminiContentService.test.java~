@@ -1,0 +1,108 @@
+package com.audio;
+
+import com.audio.service.GeminiContentService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+@ExtendWith(MockitoExtension.class)
+class GeminiContentServiceTest {
+
+    @InjectMocks
+    private GeminiContentService geminiContentService;
+
+    @Mock
+    private URL mockUrl;
+
+    @Mock
+    private HttpURLConnection mockConnection;
+
+    @BeforeEach
+    public void setUp() throws Exception {
+        ReflectionTestUtils.setField(geminiContentService, "API_URL", "https://mock-url.com");
+        ReflectionTestUtils.setField(geminiContentService, "apiKey", "mock-api-key");
+        when(mockUrl.openConnection()).thenReturn(mockConnection);
+    }
+
+
+
+    @Test
+    public void testGenerateContent_ApiUnavailable() throws Exception {
+        // Arrange
+        String testText = "Test content";
+        when(mockConnection.getOutputStream()).thenReturn(new ByteArrayOutputStream());
+        when(mockConnection.getInputStream()).thenThrow(new IOException("API unavailable"));
+
+        // Act
+        String result = geminiContentService.generateContent(testText);
+
+        // Assert
+        assertEquals("Error generating content", result);
+        verify(mockConnection).setRequestMethod("POST");
+        verify(mockConnection).setRequestProperty("Content-Type", "application/json");
+        verify(mockConnection).setDoOutput(true);
+    }
+
+    // ... rest of your test methods ...
+    @Test
+    public void testGenerateContentWithLongInput() throws Exception {
+        // Arrange
+        String longInput = "a".repeat(10000); // Create a very long input string
+        String expectedResponse = "Mocked response for long input";
+
+        when(mockUrl.openConnection()).thenReturn(mockConnection);
+        when(mockConnection.getInputStream()).thenReturn(
+                new ByteArrayInputStream(expectedResponse.getBytes()));
+
+        // Act
+        String result = geminiContentService.generateContent(longInput);
+
+        // Assert
+        assertEquals(expectedResponse, result);
+        verify(mockConnection).setRequestMethod("POST");
+        verify(mockConnection).setRequestProperty("Content-Type", "application/json");
+        verify(mockConnection).setDoOutput(true);
+
+        // Verify that the entire long input was sent in the request
+        ArgumentCaptor<byte[]> outputStreamCaptor = ArgumentCaptor.forClass(byte[].class);
+        verify(mockConnection.getOutputStream()).write(outputStreamCaptor.capture());
+        String sentJson = new String(outputStreamCaptor.getValue());
+        assertTrue(sentJson.contains(longInput));
+    }@Test
+    public void testGenerateContent_InvalidApiKey() throws Exception {
+        // Arrange
+        String invalidApiKey = "invalid_key";
+        ReflectionTestUtils.setField(geminiContentService, "apiKey", invalidApiKey);
+        String testText = "Test content";
+
+        when(mockUrl.openConnection()).thenReturn(mockConnection);
+        when(mockConnection.getOutputStream()).thenReturn(new ByteArrayOutputStream());
+        when(mockConnection.getInputStream()).thenThrow(new IOException("Invalid API key"));
+
+        // Act
+        String result = geminiContentService.generateContent(testText);
+
+        // Assert
+        assertEquals("Error generating content", result);
+        verify(mockConnection).setRequestMethod("POST");
+        verify(mockConnection).setRequestProperty("Content-Type", "application/json");
+        verify(mockConnection).setDoOutput(true);
+    }
+}

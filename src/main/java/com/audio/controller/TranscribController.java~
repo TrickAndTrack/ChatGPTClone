@@ -1,0 +1,38 @@
+package com.audio.controller;
+
+
+
+import com.audio.service.GeminiContentService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
+
+@RestController
+@CrossOrigin(origins = "http://localhost:4200")
+@RequestMapping("/api")
+public class TranscribController {
+
+
+
+    private final GeminiContentService geminiContentService;
+
+    @Autowired
+    public TranscribController(GeminiContentService geminiContentService) {
+        this.geminiContentService = geminiContentService;
+    }
+
+    @PostMapping("/generate-content")
+    public String generateContent(@RequestParam("text") String text) {
+        return geminiContentService.generateContent(text);
+    }
+
+//    @PostMapping("/generate-content")
+//    public Map<String, String> generateContent(@RequestBody Map<String, String> body) {
+//        String text = body.get("text");
+//        String resultJson = geminiContentService.generateContent(text);
+//        return Map.of("result", resultJson);
+//    }
+
+
+}
